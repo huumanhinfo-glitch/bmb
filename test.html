@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tournament UI - Lexend Font</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --overlay-bg: #1c1c1e;
+            --primary: #76e082;
+            --text-main: #ffffff;
+            --text-muted: #8e8e93;
+            --input-bg: #2c2c2e;
+        }
+
+        * {
+            box-sizing: border-box;
+            /* Áp dụng font Lexend cho toàn bộ giao diện */
+            font-family: 'Lexend', sans-serif; 
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: #000;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
+
+        /* --- Header --- */
+        .header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        h2 { font-weight: 600; font-size: 1.1rem; margin: 0; }
+        h3 { font-weight: 500; font-size: 1rem; margin: 0; }
+
+        /* --- List Styles --- */
+        .list-item {
+            background: var(--card-bg);
+            margin: 0 15px 10px;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .list-item:active { background: #2c2c2e; }
+
+        /* --- Modal Animation --- */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: flex-end;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.3s ease;
+            z-index: 100;
+        }
+
+        .overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .modal-content {
+            width: 100%;
+            background: var(--overlay-bg);
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 25px 20px 40px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        /* --- Form Elements --- */
+        .input-group { margin-bottom: 20px; }
+        .label { 
+            color: var(--text-muted); 
+            font-size: 0.8rem; 
+            margin-bottom: 8px; 
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            background: var(--input-bg);
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: #121212;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .close-icon {
+            float: right;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <span>&#10094;</span>
+        <h2>Tournament</h2>
+        <div style="width:20px"></div>
+    </div>
+
+    <div class="list-item" onclick="openModal('modalSeeding')">
+        <span>📊 View Seeding</span>
+        <span>&#10095;</span>
+    </div>
+
+    <div class="list-item" onclick="openModal('modalPlayer')">
+        <span>👤 Edit Player 1</span>
+        <span>&#10095;</span>
+    </div>
+
+    <div id="modalPlayer" class="overlay">
+        <div class="modal-content">
+            <span class="close-icon" onclick="closeModal('modalPlayer')">&times;</span>
+            <h3 style="text-align: center; margin-bottom: 25px;">Select Player/Team</h3>
+            
+            <div class="input-group">
+                <label class="label">Name</label>
+                <input type="text" value="Player 1">
+            </div>
+
+            <div class="input-group">
+                <label class="label">Code</label>
+                <input type="text" value="721776">
+            </div>
+
+            <button class="btn-save" onclick="closeModal('modalPlayer')">Save</button>
+        </div>
+    </div>
+
+    <div id="modalSeeding" class="overlay">
+        <div class="modal-content">
+            <span class="close-icon" onclick="closeModal('modalSeeding')">&times;</span>
+            <h3 style="text-align: center; margin-bottom: 25px;">Seeding</h3>
+            
+            <div style="background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #333;">
+                    <span>🟢 Team 1</span>
+                    <span style="color: var(--text-muted)">1</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #333;">
+                    <span>🟣 Team 2</span>
+                    <span style="color: var(--text-muted)">2</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="label">Method</label>
+                <input type="text" value="Sequential" readonly style="background: #3a3a3c; cursor: pointer;">
+            </div>
+
+            <button class="btn-save" onclick="closeModal('modalSeeding')">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Đóng khi click ngoài vùng modal
+    document.querySelectorAll('.overlay').forEach(overlay => {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

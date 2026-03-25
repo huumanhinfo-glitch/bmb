@@ -1,0 +1,15 @@
+vendor/
+node_modules/
+*.log
+error_log
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.env
+.env.local
+.phpunit.result.cache
+composer.lock

@@ -11,8 +11,8 @@ RUN apk add --no-cache \
     zip \
     unzip
 
-# Install PHP extensions with SSL support
-RUN docker-php-ext-install pdo pdo_mysql pdo_sqlite zip
+# Install PHP extensions
+RUN docker-php-ext-install pdo pdo_mysql zip
 
 # Configure Nginx
 COPY nginx.conf /etc/nginx/http.d/default.conf

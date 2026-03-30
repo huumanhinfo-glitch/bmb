@@ -10,11 +10,11 @@ $search = $_GET['search'] ?? '';
 // Lấy danh sách giải đấu với thống kê
 $query = "
     SELECT t.*, 
-           (SELECT COUNT(*) FROM Teams WHERE tournament_id = t.id) as team_count,
-           (SELECT COUNT(*) FROM Matches WHERE tournament_id = t.id) as match_count,
-           (SELECT COUNT(*) FROM Matches WHERE tournament_id = t.id AND status = 'completed') as completed_match_count,
-           (SELECT COUNT(*) FROM Groups WHERE tournament_id = t.id) as group_count
-    FROM Tournaments t
+           (SELECT COUNT(*) FROM `Teams` WHERE tournament_id = t.id) as team_count,
+           (SELECT COUNT(*) FROM `Matches` WHERE tournament_id = t.id) as match_count,
+           (SELECT COUNT(*) FROM `Matches` WHERE tournament_id = t.id AND status = 'completed') as completed_match_count,
+           (SELECT COUNT(*) FROM `Groups` WHERE tournament_id = t.id) as group_count
+    FROM `Tournaments` t
     ORDER BY 
         CASE t.status 
             WHEN 'ongoing' THEN 1

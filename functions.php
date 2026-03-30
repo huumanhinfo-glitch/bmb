@@ -11,7 +11,7 @@ function fetchAllTeams() {
     global $pdo;
     return $pdo->query("
         SELECT t.*, tr.name as tournament_name, tr.id as tournament_id
-        FROM Teams t
+        FROM `Teams` t
         LEFT JOIN Tournaments tr ON t.tournament_id = tr.id
         ORDER BY tr.name, t.skill_level DESC, t.team_name
     ")->fetchAll();
@@ -24,7 +24,7 @@ function fetchTeamsByTournament($tournamentId) {
     global $pdo;
     $stmt = $pdo->prepare("
         SELECT t.*, tr.name as tournament_name 
-        FROM Teams t
+        FROM `Teams` t
         LEFT JOIN Tournaments tr ON t.tournament_id = tr.id
         WHERE t.tournament_id = ? 
         ORDER BY t.skill_level DESC, t.team_name
@@ -48,7 +48,7 @@ function insertTeam($teamName, $p1, $p2, $tournamentId = null, $skillLevel = nul
  */
 function deleteAllTeams() {
     global $pdo;
-    return $pdo->exec("DELETE FROM Teams");
+    return $pdo->exec("DELETE FROM `Teams`");
 }
 
 /**
@@ -56,7 +56,7 @@ function deleteAllTeams() {
  */
 function deleteTeamById($teamId) {
     global $pdo;
-    $stmt = $pdo->prepare("DELETE FROM Teams WHERE id = ?");
+    $stmt = $pdo->prepare("DELETE FROM `Teams` WHERE id = ?");
     return $stmt->execute([$teamId]);
 }
 
@@ -68,12 +68,12 @@ function clearGroupsAndMatches($tournamentId = null) {
     
     if ($tournamentId) {
         // Xóa matches của giải đấu
-        $pdo->prepare("DELETE FROM Matches WHERE tournament_id = ?")->execute([$tournamentId]);
+        $pdo->prepare("DELETE FROM `Matches` WHERE tournament_id = ?")->execute([$tournamentId]);
         // Xóa groups của giải đấu
-        $pdo->prepare("DELETE FROM Groups WHERE tournament_id = ?")->execute([$tournamentId]);
+        $pdo->prepare("DELETE FROM `Groups` WHERE tournament_id = ?")->execute([$tournamentId]);
     } else {
-        $pdo->exec("DELETE FROM Matches");
-        $pdo->exec("DELETE FROM Groups");
+        $pdo->exec("DELETE FROM `Matches`");
+        $pdo->exec("DELETE FROM `Groups`");
     }
     $pdo->exec("UPDATE Teams SET group_name = NULL");
 }
@@ -93,7 +93,7 @@ function createGroup($name, $tournamentId) {
  */
 function fetchAllGroups() {
     global $pdo;
-    return $pdo->query("SELECT * FROM Groups ORDER BY group_name")->fetchAll();
+    return $pdo->query("SELECT * FROM `Groups` ORDER BY group_name")->fetchAll();
 }
 
 /**
@@ -101,7 +101,7 @@ function fetchAllGroups() {
  */
 function getGroupById($groupId) {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM Groups WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM `Groups` WHERE id = ?");
     $stmt->execute([$groupId]);
     return $stmt->fetch();
 }
@@ -113,7 +113,7 @@ function getTeamsInGroup($groupId) {
     global $pdo;
     $stmt = $pdo->prepare("
         SELECT DISTINCT t.* 
-        FROM Teams t 
+        FROM `Teams` t 
         INNER JOIN Matches m ON (t.id = m.team1_id OR t.id = m.team2_id) 
         WHERE m.group_id = ?
         ORDER BY t.team_name
@@ -130,7 +130,7 @@ function saveMatch($team1_id, $team2_id, $group_id = null, $round = '', $tournam
     
     // Lấy tournament_id từ group nếu không được cung cấp
     if ($tournament_id === null && $group_id !== null) {
-        $stmt = $pdo->prepare("SELECT tournament_id FROM Groups WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT tournament_id FROM `Groups` WHERE id = ?");
         $stmt->execute([$group_id]);
         $group = $stmt->fetch();
         $tournament_id = $group['tournament_id'] ?? null;
@@ -157,10 +157,10 @@ function getMatchById($matchId) {
     global $pdo;
     $stmt = $pdo->prepare("
         SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name, g.group_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
-        LEFT JOIN Groups g ON m.group_id = g.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+        LEFT JOIN `Groups` g ON m.group_id = g.id
         WHERE m.id = ?
     ");
     $stmt->execute([$matchId]);
@@ -182,10 +182,10 @@ function getAllMatches($groupFilter = null, $tournamentFilter = null) {
                t2.skill_level as skill_level2,
                t2.player1 as team2_player1, t2.player2 as team2_player2,
                g.group_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
-        LEFT JOIN Groups g ON m.group_id = g.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+        LEFT JOIN `Groups` g ON m.group_id = g.id
         WHERE 1=1
     ";
     
@@ -396,10 +396,10 @@ function calculateStandings($tournamentFilter = null) {
         SELECT m.*, g.group_name, 
                t1.tournament_id as t1_tournament_id,
                t2.tournament_id as t2_tournament_id
-        FROM Matches m
-        LEFT JOIN Groups g ON m.group_id = g.id
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Groups` g ON m.group_id = g.id
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         WHERE m.group_id IS NOT NULL
     ";
     
@@ -467,7 +467,7 @@ function getTeamInfo($teamId) {
     global $pdo;
     $stmt = $pdo->prepare("
         SELECT t.*, tr.name as tournament_name 
-        FROM Teams t
+        FROM `Teams` t
         LEFT JOIN Tournaments tr ON t.tournament_id = tr.id
         WHERE t.id = ?
     ");
@@ -562,7 +562,7 @@ function compareTeams($a, $b) {
 function getDirectMatchResult($team1Id, $team2Id) {
     global $pdo;
     $stmt = $pdo->prepare("
-        SELECT * FROM Matches 
+        SELECT * FROM `Matches` 
         WHERE (team1_id = ? AND team2_id = ?) 
            OR (team1_id = ? AND team2_id = ?)
         LIMIT 1
@@ -602,7 +602,7 @@ function createKnockoutStage($qualifiedTeams = null) {
     }
     
     // Xóa các trận đấu vòng loại cũ
-    $pdo->exec("DELETE FROM Matches WHERE group_id IS NULL");
+    $pdo->exec("DELETE FROM `Matches` WHERE group_id IS NULL");
     
     // Xáo trộn đội để tạo cặp đấu
     shuffle($qualifiedTeams);
@@ -624,7 +624,7 @@ function createKnockoutStage($qualifiedTeams = null) {
  */
 function getAllTournaments() {
     global $pdo;
-    $stmt = $pdo->query("SELECT * FROM Tournaments ORDER BY created_at DESC, name");
+    $stmt = $pdo->query("SELECT * FROM `Tournaments` ORDER BY created_at DESC, name");
     return $stmt->fetchAll();
 }
 
@@ -643,7 +643,7 @@ function getTournamentStats($tournamentId = null) {
     ];
     
     // Thống kê đội
-    $sql = "SELECT COUNT(*) as count, skill_level FROM Teams";
+    $sql = "SELECT COUNT(*) as count, skill_level FROM `Teams`";
     if ($tournamentId) {
         $sql .= " WHERE tournament_id = ?";
         $stmt = $pdo->prepare($sql);
@@ -666,9 +666,9 @@ function getTournamentStats($tournamentId = null) {
     $sql = "
         SELECT COUNT(*) as total,
                SUM(CASE WHEN score1 IS NOT NULL AND score2 IS NOT NULL THEN 1 ELSE 0 END) as completed
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
     ";
     
     if ($tournamentId) {
@@ -684,13 +684,13 @@ function getTournamentStats($tournamentId = null) {
     $stats['completed_matches'] = $matchStats['completed'] ?? 0;
     
     // Thống kê số bảng
-    $sql = "SELECT COUNT(DISTINCT group_id) as groups FROM Matches WHERE group_id IS NOT NULL";
+    $sql = "SELECT COUNT(DISTINCT group_id) as groups FROM `Matches` WHERE group_id IS NOT NULL";
     if ($tournamentId) {
         $sql = "
             SELECT COUNT(DISTINCT m.group_id) as groups
-            FROM Matches m
-            LEFT JOIN Teams t1 ON m.team1_id = t1.id
-            LEFT JOIN Teams t2 ON m.team2_id = t2.id
+            FROM `Matches` m
+            LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+            LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
             WHERE (t1.tournament_id = ? OR t2.tournament_id = ?) AND m.group_id IS NOT NULL
         ";
         $stmt = $pdo->prepare($sql);
@@ -718,12 +718,12 @@ if (!function_exists('createSampleData')) {
             
             if ($tournamentId) {
                 // Xóa dữ liệu cũ của giải đấu
-                $pdo->prepare("DELETE FROM Matches WHERE tournament_id = ?")->execute([$tournamentId]);
-                $pdo->prepare("DELETE FROM Teams WHERE tournament_id = ?")->execute([$tournamentId]);
-                $pdo->prepare("DELETE FROM Groups WHERE tournament_id = ?")->execute([$tournamentId]);
+                $pdo->prepare("DELETE FROM `Matches` WHERE tournament_id = ?")->execute([$tournamentId]);
+                $pdo->prepare("DELETE FROM `Teams` WHERE tournament_id = ?")->execute([$tournamentId]);
+                $pdo->prepare("DELETE FROM `Groups` WHERE tournament_id = ?")->execute([$tournamentId]);
                 
                 // Lấy thông tin giải đấu
-                $stmt = $pdo->prepare("SELECT * FROM Tournaments WHERE id = ?");
+                $stmt = $pdo->prepare("SELECT * FROM `Tournaments` WHERE id = ?");
                 $stmt->execute([$tournamentId]);
                 $tournament = $stmt->fetch();
                 
@@ -840,7 +840,7 @@ function createAdminUser() {
     global $pdo;
     
     // Kiểm tra xem admin đã tồn tại chưa
-    $stmt = $pdo->prepare("SELECT id FROM Users WHERE username = 'admin'");
+    $stmt = $pdo->prepare("SELECT id FROM `Users` WHERE username = 'admin'");
     $stmt->execute();
     
     if (!$stmt->fetch()) {
@@ -856,7 +856,7 @@ function createAdminUser() {
 function authenticateUser($username, $password) {
     global $pdo;
     
-    $stmt = $pdo->prepare("SELECT * FROM Users WHERE username = ?");
+    $stmt = $pdo->prepare("SELECT * FROM `Users` WHERE username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
     
@@ -873,7 +873,7 @@ function authenticateUser($username, $password) {
 function getUserById($userId) {
     global $pdo;
     
-    $stmt = $pdo->prepare("SELECT * FROM Users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM `Users` WHERE id = ?");
     $stmt->execute([$userId]);
     return $stmt->fetch();
 }
@@ -917,7 +917,7 @@ function getSkillLevelIcon($skillLevel) {
  */
 function getTournamentById($tournamentId) {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM Tournaments WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM `Tournaments` WHERE id = ?");
     $stmt->execute([$tournamentId]);
     return $stmt->fetch();
 }
@@ -929,7 +929,7 @@ function getGroupsByTournament($tournamentId) {
     global $pdo;
     $stmt = $pdo->prepare("
         SELECT g.*, t.name as tournament_name 
-        FROM Groups g
+        FROM `Groups` g
         LEFT JOIN Tournaments t ON g.tournament_id = t.id
         WHERE g.tournament_id = ? 
         ORDER BY g.group_name
@@ -948,10 +948,10 @@ function getMatchesByTournament($tournamentId) {
                t1.team_name as team1_name, 
                t2.team_name as team2_name,
                g.group_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
-        LEFT JOIN Groups g ON m.group_id = g.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+        LEFT JOIN `Groups` g ON m.group_id = g.id
         WHERE t1.tournament_id = ? OR t2.tournament_id = ?
         ORDER BY m.round, m.id
     ");
@@ -973,7 +973,7 @@ function canManageTournament($user_id, $tournament_id, $user_role) {
         // Kiểm tra xem user có phải là owner hoặc được phân quyền quản lý không
         $stmt = $pdo->prepare("
             SELECT COUNT(*) 
-            FROM Tournaments t 
+            FROM `Tournaments` t 
             LEFT JOIN TournamentManagers tm ON t.id = tm.tournament_id
             WHERE t.id = ? AND (t.owner_id = ? OR tm.user_id = ?)
         ");
@@ -989,7 +989,7 @@ function canManageTournament($user_id, $tournament_id, $user_role) {
  */
 function getUserInfo($user_id) {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM Users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM `Users` WHERE id = ?");
     $stmt->execute([$user_id]);
     return $stmt->fetch();
 }
@@ -1001,7 +1001,7 @@ function registerUser($username, $password, $displayName = '', $email = '', $pho
     global $pdo;
     
     // Kiểm tra username đã tồn tại chưa
-    $stmt = $pdo->prepare("SELECT id FROM Users WHERE username = ?");
+    $stmt = $pdo->prepare("SELECT id FROM `Users` WHERE username = ?");
     $stmt->execute([$username]);
     
     if ($stmt->fetch()) {
@@ -1038,7 +1038,7 @@ function getArenaById($id) {
  */
 function getAllReferees() {
     global $pdo;
-    $stmt = $pdo->query("SELECT id, username, display_name FROM Users WHERE role = 'referee' ORDER BY username");
+    $stmt = $pdo->query("SELECT id, username, display_name FROM `Users` WHERE role = 'referee' ORDER BY username");
     return $stmt->fetchAll();
 }
 
@@ -1047,7 +1047,7 @@ function getAllReferees() {
  */
 function getAllManagers() {
     global $pdo;
-    $stmt = $pdo->query("SELECT id, username, display_name FROM Users WHERE role = 'manager' ORDER BY username");
+    $stmt = $pdo->query("SELECT id, username, display_name FROM `Users` WHERE role = 'manager' ORDER BY username");
     return $stmt->fetchAll();
 }
 
@@ -1062,8 +1062,8 @@ function getAllRefereeAssignments() {
                u.username as referee_username, u.display_name as referee_name
         FROM RefereeAssignments ra
         JOIN Matches m ON ra.match_id = m.id
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         JOIN Users u ON ra.referee_id = u.id
         ORDER BY ra.assigned_at DESC
     ");
@@ -1095,9 +1095,9 @@ function getKnockoutMatches($tournamentId = null) {
         SELECT m.*, 
                t1.team_name as team1_name, 
                t2.team_name as team2_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         WHERE m.group_id IS NULL
     ";
     
@@ -1186,9 +1186,9 @@ function getMatchesForRefereeAssignment($tournament_id = null) {
                t2.team_name as team2_name,
                tr.name as tournament_name,
                tr.id as tournament_id
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
         WHERE 1=1
     ";
@@ -1258,9 +1258,9 @@ function getMatchesWithoutMainReferee($tournament_id = null) {
     
     $sql = "
         SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         WHERE m.id NOT IN (
             SELECT match_id FROM RefereeAssignments 
             WHERE assignment_type = 'main' AND status != 'cancelled'
@@ -1293,9 +1293,9 @@ function getMatchDetailsForReferee($match_id, $referee_id = null) {
                t2.team_name as team2_name, t2.player1 as team2_player1, t2.player2 as team2_player2,
                tr.name as tournament_name, tr.location as tournament_location,
                a.name as arena_name, a.location as arena_location
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
         LEFT JOIN Arena a ON m.arena_id = a.id
         WHERE m.id = ?
@@ -1339,8 +1339,8 @@ function getRefereeAssignmentHistory($referee_id, $limit = 10) {
                m.score1, m.score2, m.match_date, m.court
         FROM RefereeAssignments ra
         JOIN Matches m ON ra.match_id = m.id
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
         WHERE ra.referee_id = ?
         ORDER BY ra.assigned_at DESC
@@ -1516,8 +1516,8 @@ function getRefereeAssignmentsByReferee($referee_id) {
                tr.name as tournament_name
         FROM RefereeAssignments ra
         JOIN Matches m ON ra.match_id = m.id
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
         WHERE ra.referee_id = ?
         ORDER BY ra.assigned_at DESC
@@ -1583,8 +1583,8 @@ function getTournamentSchedule($tournamentId, $date = null) {
                    a.name as court_name
             FROM TournamentSchedule s
             LEFT JOIN Matches m ON s.match_id = m.id
-            LEFT JOIN Teams t1 ON m.team1_id = t1.id
-            LEFT JOIN Teams t2 ON m.team2_id = t2.id
+            LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+            LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
             LEFT JOIN Arena a ON s.court_id = a.id
             WHERE s.tournament_id = ? AND s.scheduled_date = ?
             ORDER BY s.scheduled_time
@@ -1597,8 +1597,8 @@ function getTournamentSchedule($tournamentId, $date = null) {
                    a.name as court_name
             FROM TournamentSchedule s
             LEFT JOIN Matches m ON s.match_id = m.id
-            LEFT JOIN Teams t1 ON m.team1_id = t1.id
-            LEFT JOIN Teams t2 ON m.team2_id = t2.id
+            LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+            LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
             LEFT JOIN Arena a ON s.court_id = a.id
             WHERE s.tournament_id = ?
             ORDER BY s.scheduled_date, s.scheduled_time
@@ -1627,7 +1627,7 @@ if (!function_exists('getGroupStandings')) {
 function getGroupStandings($groupId) {
     global $pdo;
     
-    $teams = $pdo->prepare("SELECT * FROM Teams WHERE group_name = ? ORDER BY seed");
+    $teams = $pdo->prepare("SELECT * FROM `Teams` WHERE group_name = ? ORDER BY seed");
     $teams->execute([$groupId]);
     $teams = $teams->fetchAll();
     
@@ -1640,7 +1640,7 @@ function getGroupStandings($groupId) {
                 SUM(CASE WHEN winner_id IS NOT NULL AND winner_id != ? THEN 1 ELSE 0 END) as losses,
                 SUM(CASE WHEN team1_id = ? THEN score1 ELSE score2 END) as points_for,
                 SUM(CASE WHEN team1_id = ? THEN score2 ELSE score1 END) as points_against
-            FROM Matches 
+            FROM `Matches` 
             WHERE (team1_id = ? OR team2_id = ?) AND status = 'completed'
         ");
         $stmt->execute([$team['id'], $team['id'], $team['id'], $team['id'], $team['id'], $team['id']]);
@@ -1677,8 +1677,8 @@ function getNextScheduledMatch($tournamentId) {
                a.name as court_name
         FROM TournamentSchedule s
         JOIN Matches m ON s.match_id = m.id
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
         LEFT JOIN Arena a ON s.court_id = a.id
         WHERE s.tournament_id = ? AND s.status = 'scheduled'
         ORDER BY s.scheduled_date, s.scheduled_time
@@ -1694,7 +1694,7 @@ function getNextScheduledMatch($tournamentId) {
 function advanceTournamentStage($tournamentId) {
     global $pdo;
     
-    $stmt = $pdo->prepare("SELECT stage FROM Tournaments WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT stage FROM `Tournaments` WHERE id = ?");
     $stmt->execute([$tournamentId]);
     $tournament = $stmt->fetch();
     
@@ -1723,10 +1723,10 @@ function getPendingMatches($tournamentId) {
     $stmt = $pdo->prepare("
         SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name,
                g.group_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
-        LEFT JOIN Groups g ON m.group_id = g.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+        LEFT JOIN `Groups` g ON m.group_id = g.id
         WHERE m.tournament_id = ? AND m.status = 'pending'
         ORDER BY m.round, m.match_date
     ");
@@ -1772,10 +1772,10 @@ function getCompletedMatches($tournamentId) {
     $stmt = $pdo->prepare("
         SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name,
                g.group_name
-        FROM Matches m
-        LEFT JOIN Teams t1 ON m.team1_id = t1.id
-        LEFT JOIN Teams t2 ON m.team2_id = t2.id
-        LEFT JOIN Groups g ON m.group_id = g.id
+        FROM `Matches` m
+        LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+        LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+        LEFT JOIN `Groups` g ON m.group_id = g.id
         WHERE m.tournament_id = ? AND m.status = 'completed'
         ORDER BY m.completed_at DESC
     ");

@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_tournament']))
 if (isset($_GET['delete_tournament'])) {
     $id = intval($_GET['delete_tournament']);
     try {
-        $pdo->prepare("DELETE FROM Tournaments WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM `Tournaments` WHERE id = ?")->execute([$id]);
         $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa giải đấu!</div>';
     } catch (Exception $e) {
         $message = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Lỗi: ' . $e->getMessage() . '</div>';
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_team'])) {
 if (isset($_GET['delete_team'])) {
     $id = intval($_GET['delete_team']);
     try {
-        $pdo->prepare("DELETE FROM Teams WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM `Teams` WHERE id = ?")->execute([$id]);
         $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa đội!</div>';
     } catch (Exception $e) {
         $message = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Lỗi: ' . $e->getMessage() . '</div>';
@@ -120,11 +120,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_arena'])) {
     if ($name) {
         try {
             if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE Arenas SET name = ?, location = ?, status = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE Arena SET name = ?, location = ?, status = ? WHERE id = ?");
                 $stmt->execute([$name, $location, $status, $id]);
                 $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã cập nhật sân!</div>';
             } else {
-                $stmt = $pdo->prepare("INSERT INTO Arenas (name, location, status) VALUES (?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO Arena (name, location, status) VALUES (?, ?, ?)");
                 $stmt->execute([$name, $location, $status]);
                 $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã thêm sân mới!</div>';
             }
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_arena'])) {
 if (isset($_GET['delete_arena'])) {
     $id = intval($_GET['delete_arena']);
     try {
-        $pdo->prepare("DELETE FROM Arenas WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM Arena WHERE id = ?")->execute([$id]);
         $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa sân!</div>';
     } catch (Exception $e) {
         $message = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Lỗi: ' . $e->getMessage() . '</div>';
@@ -187,7 +187,7 @@ if (isset($_GET['delete_user']) && $user_role === 'admin') {
     $id = intval($_GET['delete_user']);
     if ($id !== $_SESSION['user_id']) {
         try {
-            $pdo->prepare("DELETE FROM Users WHERE id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM `Users` WHERE id = ?")->execute([$id]);
             $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa người dùng!</div>';
         } catch (Exception $e) {
             $message = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Lỗi: ' . $e->getMessage() . '</div>';
@@ -199,17 +199,15 @@ if (isset($_GET['delete_user']) && $user_role === 'admin') {
 
 // Lấy dữ liệu
 $tournaments = getAllTournaments();
-$teams = $pdo->query("SELECT t.*, tr.name as tournament_name FROM Teams t LEFT JOIN Tournaments tr ON t.tournament_id = tr.id ORDER BY t.id DESC LIMIT 100")->fetchAll();
-$users = $pdo->query("SELECT * FROM Users ORDER BY role, username")->fetchAll();
-$arenas = getAllArenas();
-
-// Thống kê
+$teams = $pdo->query("SELECT t.*, tr.name as tournament_name FROM `Teams` t LEFT JOIN `Tournaments` tr ON t.tournament_id = tr.id ORDER BY t.id DESC LIMIT 100")->fetchAll();
+$users = $pdo->query("SELECT * FROM `Users` ORDER BY role, username")->fetchAll();
 $stats = [
-    'tournaments' => count($tournaments),
-    'teams' => count($teams),
-    'users' => count($users),
-    'matches' => $pdo->query("SELECT COUNT(*) FROM Matches")->fetchColumn()
+    'tournaments' => $pdo->query("SELECT COUNT(*) FROM `Tournaments`")->fetchColumn(),
+    'teams' => $pdo->query("SELECT COUNT(*) FROM `Teams`")->fetchColumn(),
+    'users' => $pdo->query("SELECT COUNT(*) FROM `Users`")->fetchColumn(),
+    'matches' => $pdo->query("SELECT COUNT(*) FROM `Matches`")->fetchColumn()
 ];
+$arenas = $pdo->query("SELECT * FROM Arena ORDER BY status, name")->fetchAll();
 
 $statusOptions = ['upcoming', 'ongoing', 'completed', 'cancelled'];
 $formatOptions = ['round_robin', 'knockout', 'combined', 'double_elimination'];

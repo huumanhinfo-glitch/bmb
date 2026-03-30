@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_teams'])) {
             if (empty($teamName)) continue;
             
             // Check trùng
-            $check = $pdo->prepare("SELECT id FROM Teams WHERE team_name = ? AND tournament_id = ?");
+            $check = $pdo->prepare("SELECT id FROM `Teams` WHERE team_name = ? AND tournament_id = ?");
             $check->execute([$teamName, $tournamentId]);
             
             if ($check->fetch()) {
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_team'])) {
 // Xử lý xóa đội
 if (isset($_GET['delete_team'])) {
     $teamId = intval($_GET['delete_team']);
-    $pdo->prepare("DELETE FROM Teams WHERE id = ?")->execute([$teamId]);
+    $pdo->prepare("DELETE FROM `Teams` WHERE id = ?")->execute([$teamId]);
     $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa đội</div>';
     $teams = fetchTeamsByTournament($tournamentId);
 }
@@ -104,8 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['draw_groups'])) {
     if ($tournamentId > 0 && !empty($teams)) {
         try {
             // Xóa dữ liệu cũ
-            $pdo->prepare("DELETE FROM Matches WHERE tournament_id = ?")->execute([$tournamentId]);
-            $pdo->prepare("DELETE FROM Groups WHERE tournament_id = ?")->execute([$tournamentId]);
+            $pdo->prepare("DELETE FROM `Matches` WHERE tournament_id = ?")->execute([$tournamentId]);
+            $pdo->prepare("DELETE FROM `Groups` WHERE tournament_id = ?")->execute([$tournamentId]);
             
             if ($drawType === 'round_robin') {
                 // Chia bảng vòng tròn
@@ -133,8 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['draw_groups'])) {
 
 // Xóa bảng đấu
 if (isset($_GET['clear_draw']) && $tournamentId > 0) {
-    $pdo->prepare("DELETE FROM Matches WHERE tournament_id = ?")->execute([$tournamentId]);
-    $pdo->prepare("DELETE FROM Groups WHERE tournament_id = ?")->execute([$tournamentId]);
+    $pdo->prepare("DELETE FROM `Matches` WHERE tournament_id = ?")->execute([$tournamentId]);
+    $pdo->prepare("DELETE FROM `Groups` WHERE tournament_id = ?")->execute([$tournamentId]);
     $message = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Đã xóa lịch thi đấu!</div>';
     $groups = getGroupsByTournament($tournamentId);
     $matches = getMatchesByTournament($tournamentId);

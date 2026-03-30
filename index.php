@@ -5,33 +5,33 @@ require_once 'functions.php';
 require_once 'components/template.php';
 
 // Lấy thống kê
-$totalTournaments = $pdo->query("SELECT COUNT(*) FROM Tournaments")->fetchColumn();
-$totalTeams = $pdo->query("SELECT COUNT(*) FROM Teams")->fetchColumn();
-$totalMatches = $pdo->query("SELECT COUNT(*) FROM Matches")->fetchColumn();
-$completedMatches = $pdo->query("SELECT COUNT(*) FROM Matches WHERE status = 'completed'")->fetchColumn();
+$totalTournaments = $pdo->query("SELECT COUNT(*) FROM `Tournaments`")->fetchColumn();
+$totalTeams = $pdo->query("SELECT COUNT(*) FROM `Teams`")->fetchColumn();
+$totalMatches = $pdo->query("SELECT COUNT(*) FROM `Matches`")->fetchColumn();
+$completedMatches = $pdo->query("SELECT COUNT(*) FROM `Matches` WHERE status = 'completed'")->fetchColumn();
 
 // Giải đấu đang diễn ra - với thông tin thống kê
 $ongoingTournaments = $pdo->query("
     SELECT 
         t.*,
-        (SELECT COUNT(*) FROM Teams WHERE tournament_id = t.id) as team_count,
-        (SELECT COUNT(DISTINCT group_name) FROM Teams WHERE tournament_id = t.id AND group_name IS NOT NULL AND group_name != '') as group_count,
-        (SELECT COUNT(*) FROM Matches WHERE tournament_id = t.id) as match_count
-    FROM Tournaments t
+        (SELECT COUNT(*) FROM `Teams` WHERE tournament_id = t.id) as team_count,
+        (SELECT COUNT(DISTINCT group_name) FROM `Teams` WHERE tournament_id = t.id AND group_name IS NOT NULL AND group_name != '') as group_count,
+        (SELECT COUNT(*) FROM `Matches` WHERE tournament_id = t.id) as match_count
+    FROM `Tournaments` t
     WHERE t.status = 'ongoing' 
     ORDER BY t.start_date DESC LIMIT 6
 ")->fetchAll();
 
 // Giải đấu sắp diễn ra
-$upcomingTournaments = $pdo->query("SELECT * FROM Tournaments WHERE status = 'upcoming' ORDER BY start_date ASC LIMIT 3")->fetchAll();
+$upcomingTournaments = $pdo->query("SELECT * FROM `Tournaments` WHERE status = 'upcoming' ORDER BY start_date ASC LIMIT 3")->fetchAll();
 
 // Trận đấu gần đây
 $recentMatches = $pdo->query("
     SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name, tr.name as tournament_name
-    FROM Matches m
-    LEFT JOIN Teams t1 ON m.team1_id = t1.id
-    LEFT JOIN Teams t2 ON m.team2_id = t2.id
-    LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
+    FROM `Matches` m
+    LEFT JOIN `Teams` t1 ON m.team1_id = t1.id
+    LEFT JOIN `Teams` t2 ON m.team2_id = t2.id
+    LEFT JOIN `Tournaments` tr ON m.tournament_id = tr.id
     WHERE m.status = 'completed'
     ORDER BY m.id DESC LIMIT 5
 ")->fetchAll();

@@ -20,15 +20,15 @@ if (!$tournament) {
 }
 
 // Thống kê
-$teamCount = $pdo->prepare("SELECT COUNT(*) FROM Teams WHERE tournament_id = ?");
+$teamCount = $pdo->prepare("SELECT COUNT(*) FROM `Teams` WHERE tournament_id = ?");
 $teamCount->execute([$tournamentId]);
 $teamCount = $teamCount->fetchColumn();
 
-$matchCount = $pdo->prepare("SELECT COUNT(*) FROM Matches WHERE tournament_id = ?");
+$matchCount = $pdo->prepare("SELECT COUNT(*) FROM `Matches` WHERE tournament_id = ?");
 $matchCount->execute([$tournamentId]);
 $matchCount = $matchCount->fetchColumn();
 
-$completedMatches = $pdo->prepare("SELECT COUNT(*) FROM Matches WHERE tournament_id = ? AND status = 'completed'");
+$completedMatches = $pdo->prepare("SELECT COUNT(*) FROM `Matches` WHERE tournament_id = ? AND status = 'completed'");
 $completedMatches->execute([$tournamentId]);
 $completedMatches = $completedMatches->fetchColumn();
 

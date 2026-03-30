@@ -16,11 +16,17 @@ $pass = $dbConfig['pass'];
 $port = $dbConfig['port'];
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=" . $dbConfig['charset'];
 
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+];
+
 try {
-    $pdo = new PDO($dsn, $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (Exception $e) {
-    die("Kết nối database thất bại: " . $e->getMessage());
+    $optionsNoSSL = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
+    $pdo = new PDO($dsn, $user, $pass, $optionsNoSSL);
 }
 
 // Kiểm tra đăng nhập

@@ -1525,4 +1525,261 @@ function getRefereeAssignmentsByReferee($referee_id) {
     $stmt->execute([$referee_id]);
     return $stmt->fetchAll();
 }
+
+/**
+ * Cập nhật giai đoạn giải đấu
+ */
+function updateTournamentStage($tournamentId, $stage) {
+    global $pdo;
+    $validStages = ['planning', 'registration', 'setup', 'group_stage', 'knockout_stage', 'completed'];
+    if (!in_array($stage, $validStages)) {
+        return false;
+    }
+    $stmt = $pdo->prepare("UPDATE Tournaments SET stage = ? WHERE id = ?");
+    return $stmt->execute([$stage, $tournamentId]);
+}
+
+/**
+ * Lấy danh sách hạng mục của giải đấu
+ */
+function getTournamentCategories($tournamentId) {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM TournamentCategories WHERE tournament_id = ? ORDER BY name");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Tạo hạng mục mới cho giải đấu
+ */
+function createTournamentCategory($tournamentId, $name, $gender = 'all', $skillMin = 0, $skillMax = 5.5, $maxTeams = 16) {
+    global $pdo;
+    $stmt = $pdo->prepare("
+        INSERT INTO TournamentCategories (tournament_id, name, gender, skill_min, skill_max, max_teams) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    return $stmt->execute([$tournamentId, $name, $gender, $skillMin, $skillMax, $maxTeams]);
+}
+
+/**
+ * Lấy thông tin hạng mục
+ */
+function getCategoryById($categoryId) {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM TournamentCategories WHERE id = ?");
+    $stmt->execute([$categoryId]);
+    return $stmt->fetch();
+}
+
+/**
+ * Lấy lịch thi đấu theo ngày
+ */
+function getTournamentSchedule($tournamentId, $date = null) {
+    global $pdo;
+    if ($date) {
+        $stmt = $pdo->prepare("
+            SELECT s.*, m.team1_id, m.team2_id, m.score1, m.score2, m.status as match_status,
+                   t1.team_name as team1_name, t2.team_name as team2_name,
+                   a.name as court_name
+            FROM TournamentSchedule s
+            LEFT JOIN Matches m ON s.match_id = m.id
+            LEFT JOIN Teams t1 ON m.team1_id = t1.id
+            LEFT JOIN Teams t2 ON m.team2_id = t2.id
+            LEFT JOIN Arena a ON s.court_id = a.id
+            WHERE s.tournament_id = ? AND s.scheduled_date = ?
+            ORDER BY s.scheduled_time
+        ");
+        $stmt->execute([$tournamentId, $date]);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT s.*, m.team1_id, m.team2_id, m.score1, m.score2, m.status as match_status,
+                   t1.team_name as team1_name, t2.team_name as team2_name,
+                   a.name as court_name
+            FROM TournamentSchedule s
+            LEFT JOIN Matches m ON s.match_id = m.id
+            LEFT JOIN Teams t1 ON m.team1_id = t1.id
+            LEFT JOIN Teams t2 ON m.team2_id = t2.id
+            LEFT JOIN Arena a ON s.court_id = a.id
+            WHERE s.tournament_id = ?
+            ORDER BY s.scheduled_date, s.scheduled_time
+        ");
+        $stmt->execute([$tournamentId]);
+    }
+    return $stmt->fetchAll();
+}
+
+/**
+ * Thêm lịch thi đấu
+ */
+function addTournamentSchedule($tournamentId, $matchId, $courtId, $scheduledTime, $scheduledDate) {
+    global $pdo;
+    $stmt = $pdo->prepare("
+        INSERT INTO TournamentSchedule (tournament_id, match_id, court_id, scheduled_time, scheduled_date) 
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    return $stmt->execute([$tournamentId, $matchId, $courtId, $scheduledTime, $scheduledDate]);
+}
+
+/**
+ * Lấy bảng xếp hạng vòng bảng
+ */
+if (!function_exists('getGroupStandings')) {
+function getGroupStandings($groupId) {
+    global $pdo;
+    
+    $teams = $pdo->prepare("SELECT * FROM Teams WHERE group_name = ? ORDER BY seed");
+    $teams->execute([$groupId]);
+    $teams = $teams->fetchAll();
+    
+    $standings = [];
+    foreach ($teams as $team) {
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(*) as matches,
+                SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins,
+                SUM(CASE WHEN winner_id IS NOT NULL AND winner_id != ? THEN 1 ELSE 0 END) as losses,
+                SUM(CASE WHEN team1_id = ? THEN score1 ELSE score2 END) as points_for,
+                SUM(CASE WHEN team1_id = ? THEN score2 ELSE score1 END) as points_against
+            FROM Matches 
+            WHERE (team1_id = ? OR team2_id = ?) AND status = 'completed'
+        ");
+        $stmt->execute([$team['id'], $team['id'], $team['id'], $team['id'], $team['id'], $team['id']]);
+        $stats = $stmt->fetch();
+        
+        $standings[] = [
+            'team' => $team,
+            'matches' => $stats['matches'] ?? 0,
+            'wins' => $stats['wins'] ?? 0,
+            'losses' => $stats['losses'] ?? 0,
+            'points_for' => $stats['points_for'] ?? 0,
+            'points_against' => $stats['points_against'] ?? 0,
+            'points' => (($stats['wins'] ?? 0) * 3) + ($stats['losses'] ?? 0)
+        ];
+    }
+    
+    usort($standings, function($a, $b) {
+        if ($b['points'] != $a['points']) return $b['points'] - $a['points'];
+        return ($b['points_for'] - $b['points_against']) - ($a['points_for'] - $a['points_against']);
+    });
+    
+    return $standings;
+}
+}
+
+/**
+ * Lấy trận đấu tiếp theo theo lịch
+ */
+function getNextScheduledMatch($tournamentId) {
+    global $pdo;
+    $stmt = $pdo->prepare("
+        SELECT s.*, m.team1_id, m.team2_id,
+               t1.team_name as team1_name, t2.team_name as team2_name,
+               a.name as court_name
+        FROM TournamentSchedule s
+        JOIN Matches m ON s.match_id = m.id
+        LEFT JOIN Teams t1 ON m.team1_id = t1.id
+        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN Arena a ON s.court_id = a.id
+        WHERE s.tournament_id = ? AND s.status = 'scheduled'
+        ORDER BY s.scheduled_date, s.scheduled_time
+        LIMIT 1
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetch();
+}
+
+/**
+ * Chuyển giai đoạn giải đấu
+ */
+function advanceTournamentStage($tournamentId) {
+    global $pdo;
+    
+    $stmt = $pdo->prepare("SELECT stage FROM Tournaments WHERE id = ?");
+    $stmt->execute([$tournamentId]);
+    $tournament = $stmt->fetch();
+    
+    $stageOrder = [
+        'planning' => 'registration',
+        'registration' => 'setup',
+        'setup' => 'group_stage',
+        'group_stage' => 'knockout_stage',
+        'knockout_stage' => 'completed'
+    ];
+    
+    $currentStage = $tournament['stage'] ?? 'planning';
+    $nextStage = $stageOrder[$currentStage] ?? $currentStage;
+    
+    $update = $pdo->prepare("UPDATE Tournaments SET stage = ? WHERE id = ?");
+    $update->execute([$nextStage, $tournamentId]);
+    
+    return $nextStage;
+}
+
+/**
+ * Lấy tất cả các trận đấu đang chờ của giải đấu
+ */
+function getPendingMatches($tournamentId) {
+    global $pdo;
+    $stmt = $pdo->prepare("
+        SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name,
+               g.group_name
+        FROM Matches m
+        LEFT JOIN Teams t1 ON m.team1_id = t1.id
+        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN Groups g ON m.group_id = g.id
+        WHERE m.tournament_id = ? AND m.status = 'pending'
+        ORDER BY m.round, m.match_date
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Hiển thị tên đội với format VĐV1 / VĐV2
+ */
+function displayTeamPlayers($team) {
+    $p1 = $team['player1'] ?? '';
+    $p2 = $team['player2'] ?? '';
+    
+    if (empty($p1) && empty($p2)) {
+        return $team['team_name'] ?? 'Chưa có VĐV';
+    }
+    
+    return nl2br(htmlspecialchars($p1 . "\nVÀ\n" . $p2));
+}
+
+/**
+ * Hiển thị tên VĐV đậm, to, rõ ràng
+ */
+function renderTeamPlayers($team, $class = '', $style = '') {
+    $p1 = $team['player1'] ?? '';
+    $p2 = $team['player2'] ?? '';
+    
+    $style = $style ?: 'font-weight: 700; font-size: 1.1rem; line-height: 1.3;';
+    
+    if (empty($p1) && empty($p2)) {
+        return '<div class="' . $class . '" style="' . $style . '">' . htmlspecialchars($team['team_name'] ?? 'Chưa có VĐV') . '</div>';
+    }
+    
+    return '<div class="' . $class . '" style="' . $style . '">
+        <strong>' . htmlspecialchars($p1) . '</strong><br>
+        <span style="font-weight: 400; font-size: 0.85rem; color: #64748b;">VÀ</span><br>
+        <strong>' . htmlspecialchars($p2) . '</strong>
+    </div>';
+}
+function getCompletedMatches($tournamentId) {
+    global $pdo;
+    $stmt = $pdo->prepare("
+        SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name,
+               g.group_name
+        FROM Matches m
+        LEFT JOIN Teams t1 ON m.team1_id = t1.id
+        LEFT JOIN Teams t2 ON m.team2_id = t2.id
+        LEFT JOIN Groups g ON m.group_id = g.id
+        WHERE m.tournament_id = ? AND m.status = 'completed'
+        ORDER BY m.completed_at DESC
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
 ?>

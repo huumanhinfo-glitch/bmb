@@ -1,511 +1,257 @@
+<?php
+// index.php - Trang chủ
+require_once 'db.php';
+require_once 'functions.php';
+require_once 'components/template.php';
+
+// Lấy thống kê
+$totalTournaments = $pdo->query("SELECT COUNT(*) FROM Tournaments")->fetchColumn();
+$totalTeams = $pdo->query("SELECT COUNT(*) FROM Teams")->fetchColumn();
+$totalMatches = $pdo->query("SELECT COUNT(*) FROM Matches")->fetchColumn();
+$completedMatches = $pdo->query("SELECT COUNT(*) FROM Matches WHERE status = 'completed'")->fetchColumn();
+
+// Giải đấu đang diễn ra
+$ongoingTournaments = $pdo->query("SELECT * FROM Tournaments WHERE status = 'ongoing' ORDER BY start_date DESC LIMIT 3")->fetchAll();
+
+// Giải đấu sắp diễn ra
+$upcomingTournaments = $pdo->query("SELECT * FROM Tournaments WHERE status = 'upcoming' ORDER BY start_date ASC LIMIT 3")->fetchAll();
+
+// Trận đấu gần đây
+$recentMatches = $pdo->query("
+    SELECT m.*, t1.team_name as team1_name, t2.team_name as team2_name, tr.name as tournament_name
+    FROM Matches m
+    LEFT JOIN Teams t1 ON m.team1_id = t1.id
+    LEFT JOIN Teams t2 ON m.team2_id = t2.id
+    LEFT JOIN Tournaments tr ON m.tournament_id = tr.id
+    WHERE m.status = 'completed'
+    ORDER BY m.id DESC LIMIT 5
+")->fetchAll();
+
+$isAdmin = isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'manager']);
+
+$statusLabels = [
+    'upcoming' => ['Sắp diễn ra', 'info'],
+    'ongoing' => ['Đang diễn ra', 'success'],
+    'completed' => ['Hoàn thành', 'secondary']
+];
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRỌNG TÀI SỐ - Đấu Trường Đỉnh Cao</title>
+    <title>TRỌNG TÀI SỐ - Quản lý giải đấu Pickleball</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    
     <style>
-        :root {
-            --primary: #2ecc71;
-            --primary-dark: #27ae60;
-            --accent: #ff6b00;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --bg-light: #f8fafc;
-            --white: #ffffff;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Open Sans', sans-serif;
-            background-color: var(--bg-light);
-            color: var(--text-dark);
-            overflow-x: hidden;
-        }
-        
-        .navbar-custom {
-            background: var(--white);
-        }
-        
-        .navbar-brand {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 800;
-            color: var(--accent) !important;
-        }
-        
-        .nav-link {
-            font-weight: 600;
-            color: var(--text-dark) !important;
-            margin: 0 10px;
-            transition: all 0.3s;
-        }
-        
-        .nav-link:hover, .nav-link.active {
-            color: var(--accent) !important;
-        }
-                .nav-tabs-custom .nav-link.active {
-            color: var(--accent);
-            background: transparent;
-        }
-        
-        
-        .nav-tabs-custom .nav-link {
-            border: none;
-            color: var(--text-dark);
-            font-weight: 600;
-            padding: 20px 25px;
-            border-radius: 0;
-            margin: 0;
-            position: relative;
-        }
-        
-        .nav-tabs-custom .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--accent);
-        }
-        
-        .hero-section {
-            background: linear-gradient(rgb(0 0 0 / 50%), rgb(0 0 0 / 55%)), 
-                        url('https://images.unsplash.com/photo-1761644658016-324918bc373c?utm_content=DAHAK3DVkBI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-        
-        .hero-content {
-            text-align: center;
-            z-index: 2;
-        }
-        
-        .logo {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 5rem;
-            font-weight: 800;
-            color: var(--accent);
-            letter-spacing: -2px;
-            margin-bottom: 0.5rem;
-            text-shadow: 2px 2px 0px var(--text-dark);
-        }
-        
-        .logo span {
-            color: var(--primary);
-            font-size: 2.5rem;
-            display: block;
-            font-weight: 600;
-            letter-spacing: 5px;
-            text-shadow: none;
-            margin-top: -10px;
-        }
-        
-        .tagline {
-            font-size: 1.25rem;
-            color: #ff7600;
-            margin-bottom: 2.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .btn-accent {
-            background-color: #CC6600;
-            color: var(--white);
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            border-radius: 50px;
-            margin: 10px;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(255, 107, 0, 0.3);
-            text-transform: uppercase;
-        }
-        
-        .btn-accent:hover {
-            background-color: #e65100;
-            transform: translateY(-3px);
-            color: var(--white);
-            box-shadow: 0 15px 30px rgba(255, 107, 0, 0.4);
-        }
-        
-        .btn-outline-primary {
-            border: 2px solid var(--primary);
-            color: var(--primary-dark);
-            background: transparent;
-            padding: 15px 40px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            border-radius: 50px;
-            margin: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-outline-primary:hover {
-            background: var(--primary);
-            color: var(--white);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
-        }
-
-        .section-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 3rem;
-            color: var(--text-dark);
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-        
-        .section-title::after {
-            content: '';
-            display: block;
-            width: 80px;
-            height: 4px;
-            background: var(--accent);
-            margin: 15px auto 0;
-            border-radius: 2px;
-        }
-
-        .dashboard-section {
-            padding: 100px 0;
-            background: var(--white);
-        }
-        
-        .dashboard-card {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 30px;
-            border: 2px solid #e2e8f0;
-            transition: all 0.3s ease;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-        
-        .dashboard-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border-color: var(--primary);
-        }
-        
-        .dashboard-icon {
-            font-size: 3.5rem;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-        }
-        
-        .dashboard-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 1rem;
-        }
-        
-        .stats-section {
-            padding: 80px 0;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-        }
-        
-        .stat-number {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 3.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-        
-        .stat-label {
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .footer {
-            background: var(--white);
-            padding: 60px 0 30px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }
-        
-        .social-link {
-            display: inline-block;
-            width: 45px;
-            height: 45px;
-            background: var(--bg-light);
-            border-radius: 50%;
-            line-height: 45px;
-            color: var(--text-dark);
-            margin: 0 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .social-link:hover {
-            background: var(--accent);
-            color: var(--white);
-            transform: translateY(-3px);
-        }
-        
-        .floating-action {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-        }
-        
-        .floating-btn {
-            width: 65px;
-            height: 65px;
-            background: linear-gradient(45deg, var(--accent), #ff9f43);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 5px 20px rgba(255, 107, 0, 0.4);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            border: 2px solid var(--white);
-        }
-        
-        .floating-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-            color: white;
-        }
-        
-        .animate-fade-in { animation: fadeIn 1s ease-in; }
-        .animate-slide-up { animation: slideUp 0.8s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-
-        @media (max-width: 768px) {
-            .logo { font-size: 3.5rem; }
-            .logo span { font-size: 1.5rem; }
-            .btn-accent, .btn-outline-primary { 
-                display: block; 
-                margin: 15px auto; 
-                width: 90%; 
-            }
-        }
+        :root { --primary: #2ecc71; --accent: #ff6b00; --text-dark: #1e293b; }
+        body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+        .navbar-brand { font-weight: 800; color: var(--accent) !important; }
+        .hero { background: linear-gradient(135deg, #1e3a5f 0%, #2ecc71 100%); color: white; padding: 60px 0; }
+        .hero-title { font-size: 2.5rem; font-weight: 800; }
+        .hero-subtitle { font-size: 1.2rem; opacity: 0.9; }
+        .stat-card { background: white; border-radius: 12px; padding: 25px; text-align: center; border-bottom: 4px solid var(--primary); transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--text-dark); }
+        .stat-label { font-size: 0.9rem; color: #64748b; text-transform: uppercase; }
+        .section-title { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin-bottom: 20px; }
+        .tournament-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0; transition: all 0.2s; }
+        .tournament-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .tournament-title { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); text-decoration: none; }
+        .tournament-title:hover { color: var(--accent); }
+        .match-card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
+        .match-card:last-child { margin-bottom: 0; }
+        .team-name { font-weight: 600; }
+        .score { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+        .vs-text { color: #94a3b8; font-weight: 600; }
+        .feature-box { background: white; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.2s; }
+        .feature-box:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
+        .feature-title { font-weight: 700; margin-bottom: 10px; }
+        .btn-primary { background: var(--primary); border: none; }
+        .btn-primary:hover { background: #27ae60; }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm ">
-        <div class="container">
-            <a class="navbar-brand" href="index.php">TRỌNG TÀI SỐ</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                <a class="nav-link active" href="index.php"><i class="fas fa-home"></i> Trang chủ</a>
-                <a class="nav-link" href="tournament_list.php"><i class="fas fa-trophy"></i> Giải đấu</a>
-                <a class="nav-link" href="matches.php"><i class="fas fa-table-tennis-paddle-ball"></i> Trận đấu</a>
-                <a class="nav-link" href="profile.php"><i class="fas fa-user"></i> Tài khoản</a>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php renderNavbar('home'); ?>
 
     <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 hero-content animate-fade-in">
-                    <h1 class="logo">TRỌNG TÀI SỐ</h1>
-                    <p class="tagline">Đam Mê - Tốc Độ - Kết Nối Cộng Đồng</p>
-                    <div class="cta-buttons animate-slide-up">
-                        <a href="draw.php" class="btn btn-accent">
-                            <i class="fas fa-trophy me-2"></i>TẠO GIẢI ĐẤU
-                        </a>
-                        <a href="matches.php" class="btn btn-outline-primary">
-                            <i class="fas fa-basketball-ball me-2"></i>XEM TRẬN ĐẤU
-                        </a>
-                    </div>
-                </div>
+    <div class="hero">
+        <div class="container text-center">
+            <h1 class="hero-title"><i class="fas fa-trophy me-3"></i>TRỌNG TÀI SỐ</h1>
+            <p class="hero-subtitle">Hệ thống quản lý giải đấu Pickleball chuyên nghiệp</p>
+            <div class="mt-4">
+                <a href="tournament_list.php" class="btn btn-light btn-lg me-2"><i class="fas fa-trophy me-2"></i>Xem giải đấu</a>
+                <?php if ($isAdmin): ?>
+                <a href="create_tournament.php" class="btn btn-warning btn-lg"><i class="fas fa-plus me-2"></i>Tạo giải mới</a>
+                <?php endif; ?>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Dashboard Section -->
-    <section class="dashboard-section">
-        <div class="container">
-            <h2 class="section-title">QUẢN LÝ GIẢI ĐẤU</h2>
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <a href="draw.php" class="text-decoration-none">
-                        <div class="dashboard-card animate-slide-up">
-                            <div class="dashboard-icon">
-                                <i class="fas fa-random"></i>
-                            </div>
-                            <h4 class="dashboard-title">BỐC THĂM</h4>
-                            <p class="text-muted">Chia bảng, tạo lịch thi đấu tự động</p>
-                        </div>
-                    </a>
+    <div class="container py-5">
+        <!-- Stats -->
+        <div class="row mb-5">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $totalTournaments; ?></div>
+                    <div class="stat-label"><i class="fas fa-trophy me-1"></i>Giải đấu</div>
                 </div>
-                
-                <div class="col-md-4 mb-4">
-                    <a href="matches.php" class="text-decoration-none">
-                        <div class="dashboard-card animate-slide-up" style="animation-delay: 0.2s">
-                            <div class="dashboard-icon">
-                                <i class="fas fa-basketball-ball"></i>
-                            </div>
-                            <h4 class="dashboard-title">QUẢN LÝ TRẬN</h4>
-                            <p class="text-muted">Cập nhật kết quả, tính bảng xếp hạng</p>
-                        </div>
-                    </a>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $totalTeams; ?></div>
+                    <div class="stat-label"><i class="fas fa-users me-1"></i>Đội tham gia</div>
                 </div>
-                
-                <div class="col-md-4 mb-4">
-                    <a href="admin.php" class="text-decoration-none">
-                        <div class="dashboard-card animate-slide-up" style="animation-delay: 0.4s">
-                            <div class="dashboard-icon">
-                                <i class="fas fa-user-shield"></i>
-                            </div>
-                            <h4 class="dashboard-title">QUẢN TRỊ VIÊN</h4>
-                            <p class="text-muted">Quản lý toàn bộ hệ thống giải đấu</p>
-                        </div>
-                    </a>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $totalMatches; ?></div>
+                    <div class="stat-label"><i class="fas fa-bullhorn me-1"></i>Trận đấu</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $completedMatches; ?></div>
+                    <div class="stat-label"><i class="fas fa-check-circle me-1"></i>Hoàn thành</div>
                 </div>
             </div>
         </div>
-    </section>
 
-    <!-- Stats Section -->
-    <section class="stats-section">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="stat-number" id="teamCount">0</div>
-                    <div class="stat-label">Đội Tham Gia</div>
+        <div class="row">
+            <!-- Ongoing Tournaments -->
+            <div class="col-md-6 mb-4">
+                <h3 class="section-title"><i class="fas fa-play text-success me-2"></i>Giải đang diễn ra</h3>
+                <?php if (empty($ongoingTournaments)): ?>
+                    <div class="text-muted text-center py-4">Không có giải đang diễn ra</div>
+                <?php else: ?>
+                    <?php foreach ($ongoingTournaments as $t): ?>
+                        <a href="tournament_view.php?id=<?php echo $t['id']; ?>" class="tournament-card d-block text-decoration-none">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="tournament-title"><?php echo htmlspecialchars($t['name']); ?></div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i><?php echo $t['start_date']; ?> - <?php echo $t['end_date']; ?>
+                                    </small>
+                                </div>
+                                <span class="badge bg-success">Đang diễn ra</span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                <a href="tournament_list.php?tab=ongoing" class="btn btn-outline-primary mt-2">Xem tất cả <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+
+            <!-- Upcoming Tournaments -->
+            <div class="col-md-6 mb-4">
+                <h3 class="section-title"><i class="fas fa-clock text-info me-2"></i>Giải sắp diễn ra</h3>
+                <?php if (empty($upcomingTournaments)): ?>
+                    <div class="text-muted text-center py-4">Không có giải sắp diễn ra</div>
+                <?php else: ?>
+                    <?php foreach ($upcomingTournaments as $t): ?>
+                        <a href="tournament_view.php?id=<?php echo $t['id']; ?>" class="tournament-card d-block text-decoration-none">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="tournament-title"><?php echo htmlspecialchars($t['name']); ?></div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i><?php echo $t['start_date']; ?> - <?php echo $t['end_date']; ?>
+                                    </small>
+                                </div>
+                                <span class="badge bg-info">Sắp diễn ra</span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                <a href="tournament_list.php?tab=upcoming" class="btn btn-outline-primary mt-2">Xem tất cả <i class="fas fa-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+
+        <!-- Recent Matches -->
+        <?php 
+        $col1 = array_slice($recentMatches, 0, ceil(count($recentMatches) / 2));
+        $col2 = array_slice($recentMatches, ceil(count($recentMatches) / 2));
+        ?>
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3 class="section-title"><i class="fas fa-history me-2"></i>Trận đấu gần đây</h3>
+            </div>
+            <?php if (empty($recentMatches)): ?>
+                <div class="col-12">
+                    <div class="text-muted text-center py-4">Chưa có trận đấu nào</div>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="stat-number" id="groupCount">0</div>
-                    <div class="stat-label">Bảng Đấu</div>
+            <?php else: ?>
+                <div class="col-md-6">
+                    <?php foreach ($col1 as $m): ?>
+                        <div class="match-card">
+                            <div class="row align-items-center">
+                                <div class="col-5">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team1_name'] ?? 'TBD'); ?></div>
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="score"><?php echo $m['score1'] ?? 0; ?> - <?php echo $m['score2'] ?? 0; ?></span>
+                                </div>
+                                <div class="col-5 text-end">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team2_name'] ?? 'TBD'); ?></div>
+                                    <small class="text-muted"><?php echo htmlspecialchars($m['tournament_name'] ?? ''); ?></small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="stat-number" id="matchCount">0</div>
-                    <div class="stat-label">Trận Đấu</div>
+                <div class="col-md-6">
+                    <?php foreach ($col2 as $m): ?>
+                        <div class="match-card">
+                            <div class="row align-items-center">
+                                <div class="col-5">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team1_name'] ?? 'TBD'); ?></div>
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="score"><?php echo $m['score1'] ?? 0; ?> - <?php echo $m['score2'] ?? 0; ?></span>
+                                </div>
+                                <div class="col-5 text-end">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team2_name'] ?? 'TBD'); ?></div>
+                                    <small class="text-muted"><?php echo htmlspecialchars($m['tournament_name'] ?? ''); ?></small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="stat-number">100%</div>
-                    <div class="stat-label">Tự Động Hóa</div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Features -->
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                    <div class="feature-title">Quản lý giải đấu</div>
+                    <p class="text-muted">Tạo và quản lý nhiều giải đấu cùng lúc với các thể thức khác nhau</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-random"></i></div>
+                    <div class="feature-title">Bốc thăm tự động</div>
+                    <p class="text-muted">Chia bảng và tạo lịch thi đấu tự động với thuật toán công bằng</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-live"></i></div>
+                    <div class="feature-title">Cập nhật trực tiếp</div>
+                    <p class="text-muted">Theo dõi và cập nhật tỷ số trận đấu real-time</p>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <h4 class="mb-3" style="color: var(--accent); font-weight: 800; font-family: 'Montserrat', sans-serif;">TRỌNG TÀI SỐ</h4>
-                    <p class="text-muted">Hệ thống quản lý giải đấu pickleball chuyên nghiệp</p>
-                    
-                    <div class="social-links mt-4">
-                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-tiktok"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
-                        <a href="mailto:admin@trongtaiso.com" class="social-link"><i class="fas fa-envelope"></i></a>
-                    </div>
-                    
-                    <p class="mt-4 mb-0 text-muted small">&copy; 2026 TRỌNG TÀI SỐ. All rights reserved.</p>
-                </div>
-            </div>
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2026 TRỌNG TÀI SỐ - Quản lý giải đấu Pickleball</p>
         </div>
     </footer>
 
-    <!-- Floating Action Button -->
-    <div class="floating-action">
-        <a href="draw.php" class="floating-btn" title="Bốc thăm ngay">
-            <i class="fas fa-random"></i>
-        </a>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Counter animation for stats
-        function animateCounter(element, target, duration = 2000) {
-            let start = 0;
-            const increment = target / (duration / 16);
-            const timer = setInterval(() => {
-                start += increment;
-                if (start >= target) {
-                    element.textContent = target;
-                    clearInterval(timer);
-                } else {
-                    element.textContent = Math.floor(start);
-                }
-            }, 16);
-        }
-
-        // Fetch stats via AJAX
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate stats (in real app, fetch from API)
-            setTimeout(() => {
-                animateCounter(document.getElementById('teamCount'), 32);
-                animateCounter(document.getElementById('groupCount'), 4);
-                animateCounter(document.getElementById('matchCount'), 48);
-            }, 1000);
-
-            // Animation on scroll
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
-            };
-
-            const observer = new IntersectionObserver(function(entries) {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.animation = 'slideUp 0.8s ease-out forwards';
-                        entry.target.style.opacity = '1';
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, observerOptions);
-
-            document.querySelectorAll('.dashboard-card').forEach(el => {
-                el.style.opacity = '0';
-                observer.observe(el);
-            });
-
-            // Smooth scrolling
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
-            });
-        });
-    </script>
 </body>
 </html>

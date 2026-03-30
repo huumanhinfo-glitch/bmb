@@ -5,12 +5,16 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Kết nối database - MySQL
-$host = 'localhost';
-$db   = 'bmb_tournaments';
-$user = 'root';
-$pass = '';
-$dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
+// Kết nối database - từ Environment Variables
+require_once __DIR__ . '/config/env.php';
+$dbConfig = Env::getDB();
+
+$host = $dbConfig['host'];
+$db   = $dbConfig['name'];
+$user = $dbConfig['user'];
+$pass = $dbConfig['pass'];
+$port = $dbConfig['port'];
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=" . $dbConfig['charset'];
 
 try {
     $pdo = new PDO($dsn, $user, $pass);

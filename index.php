@@ -159,7 +159,7 @@ $statusLabels = [
                                     </div>
                                     <div class="info-item">
                                         <i class="fas fa-calendar-alt"></i>
-                                        <span><?php echo date('d/m/Y', strtotime($t['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($t['end_date'])); ?></span>
+                                        <span><?php echo $t['start_date'] ? date('d/m/Y', strtotime($t['start_date'])) : 'Chưa cập nhật'; ?> - <?php echo $t['end_date'] ? date('d/m/Y', strtotime($t['end_date'])) : 'Chưa cập nhật'; ?></span>
                                     </div>
                                     <div class="info-item">
                                         <i class="fas fa-users"></i>

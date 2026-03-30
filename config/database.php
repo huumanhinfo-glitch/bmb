@@ -1,7 +1,7 @@
 <?php
 // config/database.php
 
-// Database configuration - LOCAL
+// Database configuration - LOCAL MYSQL
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'bmb_tournaments');
 define('DB_USER', 'root');

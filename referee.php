@@ -1,9 +1,11 @@
 <?php
 // referee.php - Trang quản lý dành cho trọng tài
+session_start();
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Kết nối database
+// Kết nối database - MySQL
 $host = 'localhost';
 $db   = 'bmb_tournaments';
 $user = 'root';
@@ -16,8 +18,6 @@ try {
 } catch (Exception $e) {
     die("Kết nối database thất bại: " . $e->getMessage());
 }
-
-session_start();
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['user_id'])) {

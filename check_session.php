@@ -8,7 +8,7 @@ echo "<pre>";
 print_r($_SESSION);
 echo "</pre>";
 
-// Kết nối database
+// Kết nối database - MySQL
 $host = 'localhost';
 $db   = 'bmb_tournaments';
 $user = 'root';

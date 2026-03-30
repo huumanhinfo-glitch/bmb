@@ -10,8 +10,17 @@ $totalTeams = $pdo->query("SELECT COUNT(*) FROM Teams")->fetchColumn();
 $totalMatches = $pdo->query("SELECT COUNT(*) FROM Matches")->fetchColumn();
 $completedMatches = $pdo->query("SELECT COUNT(*) FROM Matches WHERE status = 'completed'")->fetchColumn();
 
-// Giải đấu đang diễn ra
-$ongoingTournaments = $pdo->query("SELECT * FROM Tournaments WHERE status = 'ongoing' ORDER BY start_date DESC LIMIT 3")->fetchAll();
+// Giải đấu đang diễn ra - với thông tin thống kê
+$ongoingTournaments = $pdo->query("
+    SELECT 
+        t.*,
+        (SELECT COUNT(*) FROM Teams WHERE tournament_id = t.id) as team_count,
+        (SELECT COUNT(DISTINCT group_name) FROM Teams WHERE tournament_id = t.id AND group_name IS NOT NULL AND group_name != '') as group_count,
+        (SELECT COUNT(*) FROM Matches WHERE tournament_id = t.id) as match_count
+    FROM Tournaments t
+    WHERE t.status = 'ongoing' 
+    ORDER BY t.start_date DESC LIMIT 6
+")->fetchAll();
 
 // Giải đấu sắp diễn ra
 $upcomingTournaments = $pdo->query("SELECT * FROM Tournaments WHERE status = 'upcoming' ORDER BY start_date ASC LIMIT 3")->fetchAll();
@@ -55,10 +64,16 @@ $statusLabels = [
         .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--text-dark); }
         .stat-label { font-size: 0.9rem; color: #64748b; text-transform: uppercase; }
         .section-title { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin-bottom: 20px; }
-        .tournament-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0; transition: all 0.2s; }
+        .tournament-card { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; transition: all 0.2s; }
         .tournament-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .tournament-title { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); text-decoration: none; }
+        .tournament-card-inner { padding: 0; }
+        .tournament-header { background: linear-gradient(135deg, #1e3a5f 0%, #2ecc71 100%); padding: 10px 15px; }
+        .tournament-body { padding: 15px; }
+        .tournament-title { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); text-decoration: none; margin-bottom: 12px; }
         .tournament-title:hover { color: var(--accent); }
+        .tournament-info { display: flex; flex-direction: column; gap: 8px; }
+        .info-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #64748b; }
+        .info-item i { width: 16px; color: var(--accent); }
         .match-card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
         .match-card:last-child { margin-bottom: 0; }
         .team-name { font-weight: 600; }
@@ -118,31 +133,62 @@ $statusLabels = [
             </div>
         </div>
 
+        <!-- Ongoing Tournaments -->
         <div class="row">
-            <!-- Ongoing Tournaments -->
-            <div class="col-md-6 mb-4">
+            <div class="col-12 mb-3">
                 <h3 class="section-title"><i class="fas fa-play text-success me-2"></i>Giải đang diễn ra</h3>
-                <?php if (empty($ongoingTournaments)): ?>
+            </div>
+            <?php if (empty($ongoingTournaments)): ?>
+                <div class="col-12">
                     <div class="text-muted text-center py-4">Không có giải đang diễn ra</div>
-                <?php else: ?>
-                    <?php foreach ($ongoingTournaments as $t): ?>
-                        <a href="tournament_view.php?id=<?php echo $t['id']; ?>" class="tournament-card d-block text-decoration-none">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="tournament-title"><?php echo htmlspecialchars($t['name']); ?></div>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i><?php echo $t['start_date']; ?> - <?php echo $t['end_date']; ?>
-                                    </small>
-                                </div>
+                </div>
+            <?php else: ?>
+                <?php foreach ($ongoingTournaments as $t): ?>
+                <div class="col-md-4 mb-4">
+                    <a href="tournament_view.php?id=<?php echo $t['id']; ?>" class="tournament-card d-block text-decoration-none h-100">
+                        <div class="tournament-card-inner">
+                            <div class="tournament-header">
                                 <span class="badge bg-success">Đang diễn ra</span>
                             </div>
-                        </a>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                <a href="tournament_list.php?tab=ongoing" class="btn btn-outline-primary mt-2">Xem tất cả <i class="fas fa-arrow-right ms-1"></i></a>
-            </div>
+                            <div class="tournament-body">
+                                <h5 class="tournament-title"><?php echo htmlspecialchars($t['name']); ?></h5>
+                                <div class="tournament-info">
+                                    <div class="info-item">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span><?php echo htmlspecialchars($t['location'] ?? 'Chưa cập nhật'); ?></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-calendar-alt"></i>
+                                        <span><?php echo date('d/m/Y', strtotime($t['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($t['end_date'])); ?></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-users"></i>
+                                        <span><?php echo $t['team_count']; ?> cặp VĐV</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span><?php echo $t['group_count']; ?> bảng đấu</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-table-tennis"></i>
+                                        <span><?php echo $t['match_count']; ?> trận đấu</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-flag"></i>
+                                        <span class="badge bg-<?php echo $statusLabels[$t['status']][1] ?? 'secondary'; ?>">
+                                            <?php echo $statusLabels[$t['status']][0] ?? $t['status']; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
 
-            <!-- Upcoming Tournaments -->
+        <!-- Upcoming Tournaments -->
             <div class="col-md-6 mb-4">
                 <h3 class="section-title"><i class="fas fa-clock text-info me-2"></i>Giải sắp diễn ra</h3>
                 <?php if (empty($upcomingTournaments)): ?>
@@ -168,8 +214,9 @@ $statusLabels = [
 
         <!-- Recent Matches -->
         <?php 
-        $col1 = array_slice($recentMatches, 0, ceil(count($recentMatches) / 2));
-        $col2 = array_slice($recentMatches, ceil(count($recentMatches) / 2));
+        $col1 = array_slice($recentMatches, 0, ceil(count($recentMatches) / 3));
+        $col2 = array_slice($recentMatches, ceil(count($recentMatches) / 3), ceil(count($recentMatches) / 3));
+        $col3 = array_slice($recentMatches, ceil(count($recentMatches) * 2 / 3));
         ?>
         <div class="row mt-4">
             <div class="col-12">
@@ -180,7 +227,7 @@ $statusLabels = [
                     <div class="text-muted text-center py-4">Chưa có trận đấu nào</div>
                 </div>
             <?php else: ?>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <?php foreach ($col1 as $m): ?>
                         <div class="match-card">
                             <div class="row align-items-center">
@@ -198,8 +245,26 @@ $statusLabels = [
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <?php foreach ($col2 as $m): ?>
+                        <div class="match-card">
+                            <div class="row align-items-center">
+                                <div class="col-5">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team1_name'] ?? 'TBD'); ?></div>
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="score"><?php echo $m['score1'] ?? 0; ?> - <?php echo $m['score2'] ?? 0; ?></span>
+                                </div>
+                                <div class="col-5 text-end">
+                                    <div class="team-name"><?php echo htmlspecialchars($m['team2_name'] ?? 'TBD'); ?></div>
+                                    <small class="text-muted"><?php echo htmlspecialchars($m['tournament_name'] ?? ''); ?></small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="col-md-4">
+                    <?php foreach ($col3 as $m): ?>
                         <div class="match-card">
                             <div class="row align-items-center">
                                 <div class="col-5">

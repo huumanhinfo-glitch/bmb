@@ -122,6 +122,7 @@ $statusLabels = [
     <style>
         :root { --primary: #2ecc71; --accent: #ff6b00; --text-dark: #1e293b; }
         body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+        .navbar-brand { font-weight: 800; color: var(--accent) !important; }
         .page-header { background: linear-gradient(135deg, #1e3a5f 0%, #2ecc71 100%); color: white; padding: 30px 0; }
         .page-title { font-size: 1.8rem; font-weight: 700; margin: 0; }
         .stat-card { background: white; border-radius: 10px; padding: 15px; text-center: center; border-left: 4px solid var(--primary); }
@@ -150,7 +151,7 @@ $statusLabels = [
     </style>
 </head>
 <body>
-    <?php renderNavbar('matches'); ?>
+    <?php require_once 'components/template.php'; renderNavbar('matches'); ?>
 
     <!-- Header -->
     <div class="page-header">
